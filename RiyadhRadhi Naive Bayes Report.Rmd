@@ -1,0 +1,120 @@
+---
+title: "Riyadh Radhi HomeWork5 NaiveBayes Report"
+author: "Riyadh Radhi"
+date: "February 22, 2019"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r, message= FALSE, warning=FALSE}
+
+library(MASS)
+library(dplyr)
+library(rtf)
+library(caret)
+library(pROC)
+library(e1071)
+library(ROCR)
+
+
+```
+
+### 1. Step One:
+
+First we will read our data and divide them into training and testing sets 
+
+```{r}
+df <- read.csv("tennis.csv", stringsAsFactors = F)
+
+
+set.seed(175191)
+index <- createDataPartition(df$play, p = 0.75,list = F)
+train <- df[index,]
+test <- df[-index,]
+```
+
+### Step Two
+Now, lets run Naive Bayes classifier to predict "play" based on "humidity" and "windy"
+
+```{r}
+model <- naiveBayes(as.factor(play) ~ ., data = train, laplace = 1)
+```
+
+
+###3 Step Three
+```{r}
+model$tables
+```
+
+Now lets discuss our two tables:
+  first play with humidity: 
+if our humidity is high, we have probability of 0.6883117 that
+the game will not be played and 0.3285714 it will be played.
+while if the humidity is normal, we have 0.3376623 probability 
+the game will not be played and 0.6857143 probability, it will be played
+
+  The second table is for play conditioned on windy
+if there is no wind, we have 0.4675325 probability of not playing
+ and 0.6142857 probability of playing.
+While if we have wind, there is 0.5584416 probability that we will not play and 
+0.4000000 probability that we will play
+
+
+###4. Step Four
+
+Now lets predict class labels on our test set 
+```{r}
+testPred <- predict(model, newdata = as.matrix(test))
+
+```
+###5. Step Five
+
+Now lets try to fnd the confusion matrix
+
+```{r}
+
+testpred<- as.factor(testPred)
+test$play<- as.factor(test$play)
+
+confusionMatrix(testPred, test$play, positive = "yes")
+```
+
+Now lets talk about `"Accuracy"` and `"No Information Rate"`
+Accuracy means how often is our classifier correct overall.
+Accuracy =14  +43 /(3+14+43+11)
+Accuracy = 57/71 = 0.8028
+
+Sensitivity is equal to 0.9348 which means our model is correct
+for 93% correct for "no" value while specificity is 0.5600 
+which shows that 56% correct for the "yes" value.
+From this we can conclude that our model might be biased towards "no" value
+
+The no information error rate of our model is the average loss of our model over  y and x
+no information rate = detection rate/sensitivity = 0.6056/0.9348= 0.6479
+So **yes** accuracy and no iformation rate differs significantly in our model
+
+
+###6. Step Six
+
+The final step is to predict the probabilities of yes and no classes
+of dependent vairable and shot ROC curve and find the area under it
+```{r}
+predProb <- predict(model, newdata = as.matrix(test),type="raw")
+
+head(predProb)
+
+pTest <- prediction(predProb[,2], test$play)
+perf <- performance(pTest, "tpr","fpr")
+plot(perf)
+```
+
+# Area Under the curve
+
+```{r}
+performance(pTest, "auc")@y.values
+```
+
+So the area under the curve = 0.8386957
+
+
